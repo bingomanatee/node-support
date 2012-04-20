@@ -1,5 +1,5 @@
-var _ = require('./../../../node_modules/underscore');
-var mongoose = require('./../../../../../node_modules/mongoose');
+var _ = require('underscore');
+var mongoose = require('mongoose');
 var util = require('util');
 
 /**
