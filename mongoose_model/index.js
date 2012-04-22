@@ -50,6 +50,7 @@ MongooseModel.prototype = {
         } else {
             doc_obj = new this.model(doc);
         }
+        console.log('putting %s', util.inspect(doc_obj));
 
         var self = this;
         var _callback;
@@ -73,13 +74,54 @@ MongooseModel.prototype = {
                 if (err) {
                     _callback(err);
                 } else {
-                    doc_obj.save(_callback);
+                    doc_obj.save(function (err) {
+                        if (err) {
+                            callback(err);
+                        } else {
+                            callback(null, doc_obj);
+                        }
+                    });
                 }
             })
         } else {
-            doc_obj.save(_callback);
+            doc_obj.save(function (err) {
+                if (err) {
+                    callback(err);
+                } else {
+                    callback(null, doc_obj);
+                }
+            });
         }
 
+    },
+
+    post:function (doc, options, callback) {
+        this.put(doc, options, callback);
+    },
+
+    all:function (callback, max, skip) {
+        if (!skip) {
+            skip = 0;
+        }
+        if (!max) {
+            max = 500;
+        }
+        ;
+        try {
+            this.model.find({}).sort('_id', 1).slice(skip, max).run(callback);
+        } catch (err) {
+            callback(err);
+        }
+    },
+
+    delete:function (id, callback) {
+        this.find(get, function (err, doc) {
+            if (doc) {
+                doc.remove(callback);
+            } else {
+                callback(new Error('Cannot find that document'));
+            }
+        })
     },
 
     find:function (crit, field, options, callback) {
@@ -90,11 +132,11 @@ MongooseModel.prototype = {
         return this.model.findOne(crit, field, options, callback);
     },
 
-    all:function (callback) {
-        return this.model.find(callback);
-    },
-
     model:null,
+
+    count:function (crit, cb) {
+        return this.model.count(crit, cb);
+    },
 
     validation_errors:function (err) {
         var req_re = /Validator "required" failed for path .*/;
