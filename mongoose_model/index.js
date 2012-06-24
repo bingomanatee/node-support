@@ -1,6 +1,8 @@
 var _ = require('underscore');
 var mongoose = require('mongoose');
 var util = require('util');
+var Gate = require('support/gate');
+var Pipe = require('support/pipe');
 
 /**
  * Mongoose Model is, for the most part, a wrapper for the mongoose schema.
@@ -25,7 +27,38 @@ function MongooseModel(model, config) {
     if (config) {
         _.extend(this, config);
     }
+//    console.log('mon model: %s', util.inspect(model));
 
+    if (!(model instanceof mongoose.Model)) {
+        //      console.log(' >>>>> processing raw object %s', util.inspect(model));
+        if (!this.name) {
+            throw new Error("Dynamic models MUST have names!");
+        }
+        var schema;
+        if ((model instanceof mongoose.Schema)) {
+            schema = model;
+        } else {
+            //        console.log('making schema')
+            schema = new mongoose.Schema(model);
+        }
+
+        schema.statics.active = function (cb) {
+            var q = {'deleted':{'$ne':true}};
+            return cb ? this.find(q).run(cb) : this.find(q);
+        }
+
+        schema.statics.active_count = function (cb) {
+            var q = {'deleted':{'$ne':true}};
+            return cb ? this.find(q).count(cb) : this.find(q).count();
+        }
+
+        schema.statics.inactive = function (cb) {
+            return cb ? this.find('deleted', true).run(cb) : this.find('deleted', true)
+        }
+
+        model = mongoose.model(this.name, schema);
+        //  console.log('model = %s', util.inspect(model));
+    }
     this.model = model;
 
 }
@@ -38,6 +71,75 @@ MongooseModel.prototype = {
         return this.model.findById(id, fields, options, callback);
     },
 
+    /**
+     * Adds MULTIPLE records.
+     *
+     * @param records
+     * @param callback
+     * @param as_group
+     * @param debug
+     * @return {*}
+     */
+    add:function (records, callback, as_group, debug) {
+        if (!_.isArray(records)) {
+            return this.put(records, callback);
+        }
+
+        if (as_group) {
+            this.model.collection.insert(records, callback);
+        } else {
+            if (debug)  console.log('addding %s', util.inspect(records));
+            var self = this;
+            var gate = new Gate(function () {
+                callback(null, results);
+            }, 'add_records');
+            var results = [];
+            records.forEach(function (record) {
+                gate.task_start();
+                self.put(record, function (err, result) {
+                    if (result && !err){
+                        results.push(result);
+                    }
+                    gate.task_done();
+                });
+            });
+
+            gate.start();
+        }
+
+    },
+
+    _on_save:function (callback, record) {
+        var self = this;
+        var _callback = callback;
+
+        /* "trick" the callback into executing post_save if it exists */
+
+        if (this.post_save) {
+            _callback = function (err, doc) {
+                if (err) {
+                    //        console.log('err on save - skipping post_save');
+                    callback(err);
+                } else {
+                    //          console.log('doing post save');
+                    if (!doc) {
+                        doc = record;
+                    }
+                    self.post_save(doc, callback);
+                }
+            }
+        }
+
+        return _callback;
+    },
+
+    /**
+     * Adds a single record
+     *
+     * @param doc
+     * @param options
+     * @param callback
+     */
     put:function (doc, options, callback) {
         if (typeof options == 'function') {
             callback = options;
@@ -50,48 +152,134 @@ MongooseModel.prototype = {
         } else {
             doc_obj = new this.model(doc);
         }
-        console.log('putting %s', util.inspect(doc_obj));
+        //console.log('putting %s', util.inspect(doc_obj));
 
-        var self = this;
-        var _callback;
+        var _callback = this._on_save(callback);
 
-        if (this.post_save) {
-            _callback = function (err, doc) {
-                if (err) {
-                    console.log('err on save - skipping post_save');
-                    callback(err);
-                } else {
-                    console.log('doing post save');
-                    self.post_save(doc, callback);
-                }
+        function _save(altered_doc) {
+
+            if (altered_doc) {
+                doc_obj = altered_doc;
             }
-        } else {
-            _callback = callback;
-        }
 
-        if (this.pre_save) {
-            this.pre_save(doc_obj, function (err, doc_obj) {
-                if (err) {
-                    _callback(err);
-                } else {
-                    doc_obj.save(function (err) {
-                        if (err) {
-                            callback(err);
-                        } else {
-                            callback(null, doc_obj);
-                        }
-                    });
-                }
-            })
-        } else {
             doc_obj.save(function (err) {
                 if (err) {
                     callback(err);
                 } else {
-                    callback(null, doc_obj);
+                    _callback(null, doc_obj);
                 }
             });
         }
+
+        if (this.pre_save) {
+            this.pre_save(doc_obj, function (err, altered_doc) {
+                if (err) {
+                    callback(err);
+                } else {
+                    _save(altered_doc);
+                }
+            })
+        } else {
+            _save();
+        }
+
+    },
+
+    /* REVISE presumes a PARTIAL set of field data. */
+
+    revise:function (data, callback) {
+
+        console.log(' =========== revise data: %s', util.inspect(data));
+        var self = this;
+
+        this.get(data._id, function (err, record) {
+
+            if (err) {
+                callback(err);
+            } else {
+                delete data._id;
+
+                var array_props = [];
+                var has_array_props = false;
+                var non_array_props = {};
+                var has_na_props = false;
+
+                function _callback(err, new_record) {
+                    console.log('final callback: err-- %s, new record: %s', util.inspect(err), util.inspect(new_record));
+                    if (err) {
+                        return callback(err);
+                    } else if (!new_record) {
+                        record = new_record;
+                    }
+                    callback(null, record);
+                }
+
+                _.each(data, function (value, key) {
+                    if (_.isArray(value)) {
+                        array_props.push({field:key, values:value});
+                        has_array_props = true;
+                    } else { // @TODO: what about objects?
+                        non_array_props.push({key:key, value:value})
+                        has_na_props = true;
+                    }
+                });
+
+                console.log('array_props: %s', util.inspect(array_props));
+                console.log('non_array_props: %s', util.inspect(non_array_props));
+
+                function _handle_array_props() {
+                    var p = new Pipe(function () {
+                         //   console.log('getting record %s', record._id);
+                            self.get(record._id, _callback);
+                        },
+                        function (key_value, record, act_done, pipe_done) {
+                            if (!key_value) {
+                                return pipe_done();
+                            }
+
+                            var field = key_value.field;
+                            var values = key_value.values;
+
+                            function _add_array_values() {
+                                console.log('adding array values for %s', field);
+                                record[field] = values;
+                                record.save(act_done)
+                            }
+
+                        //    console.log('processing field %s: values %s', field, util.inspect(values));
+
+                            if (record[field]) {
+                                console.log('removing old %s', field);
+                                if (_.isArray(record[field])) {
+                                    while (record[field].length > 0) {
+                                        console.log('removing first %s of %s', field, record[field].length);
+                                        record[field].remove(record[field][0]);
+                                    }
+                                } else {
+                                    record[field] = [];
+                                }
+                          //      console.log('saving record %s', record._id);
+                                record.save(_add_array_values);
+                            } else {
+                                _add_array_values();
+                            }
+                        },
+                        array_props,
+                        record
+                    );
+                    p.start();
+                }
+
+                if (has_na_props) {
+                    _.extend(record, non_array_props);
+                    record.save(has_array_props ? _handle_array_props : _callback);
+                } else if (has_array_props) {
+                    _handle_array_props();
+                } else {
+                    _callback();
+                }
+            }
+        })
 
     },
 
@@ -134,8 +322,10 @@ MongooseModel.prototype = {
 
     model:null,
 
-    count:function (crit, cb) {
-        return this.model.count(crit, cb);
+    count:function () {
+        var a = arguments;
+        var args = [].slice.call(a, 0);
+        return this.model.count.apply(this.model, args);
     },
 
     validation_errors:function (err) {
@@ -153,8 +343,20 @@ MongooseModel.prototype = {
             list.push(_filter_error(field + ': ' + err.errors[field].message));
         }
         return list.join(',');
-    }
+    },
 
+    empty:function (cb) {
+        var self = this;
+        console.log('dropping %s ...', self.model.name);
+        this.model.collection.drop(cb);
+    },
+
+    validate:function (values, cb) {
+        var m = new this.model(values);
+        m.validate(function (err) {
+            cb(err, m);
+        });
+    }
 }
 
 module.exports = {

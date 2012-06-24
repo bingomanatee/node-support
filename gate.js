@@ -6,84 +6,130 @@
  *
  * However for future proofing, tasks are identified and optionally removed by name.
  */
-var _ = require('./../../node_modules/underscore');
+var _ = require('underscore');
+var util = require('util');
 
-module.exports = function (callback) {
-    this._tasks = [];
+module.exports = function (callback, name) {
+    if ((name == 'undefined') || (!name)){
+        throw new Error('gate name == undefined');
+    }
+    this._tasks = 0;
+    this.name = name || '';
     this._start = false;
     this.debug = false;
+    this.multi = false;
     this._callback = callback;
+    this._tasks_to_do = [];
+    this._tasks_done = [];
+    this._task_inc = 0;
 }
 
-module.exports.prototype.start = function () {
-    this._start = true;
-    var self = this;
-    if (this.debug) {
-        console.log(__filename + ':: start starting with ' + this._tasks.length + ' tasks');
-    }
-    this._check_status();
-}
+_.extend(module.exports.prototype, {
+    start:function () {
+        var self = this;
+        if (!(this.name)){
+            throw new Error('NO NAME for gate');
+        }
+        process.nextTick(function(){
+            self._on_start();
+        });
+    },
 
-module.exports.prototype.task_start = function (task) {
-    if (!task) {
-        task = this._tasks.length
-    }
-    this._tasks.push(task);
-    if (this.debug) {
-        console.log('gate task start');
-    }
-}
+    _on_start: function(){
+        this._start = true;
+        if (this.debug) {
+            console.log('GATE %s:: STARTING!!!!! %s with tasks (cb = %s)', this.name, this._tasks, this._callback.toString());
+        }
+        this._check_status();
+    },
 
+    task_start:function (task) {
 
-/**
- * @id scalar (optional)
- * returns either the designated task
- * or the last task in the queue.
- */
-module.exports.prototype.task_done = function () {
-    var done_task = this._tasks.pop();
+        if (!task) {
+            task = ++ this._task_inc;
+        }
+        this._tasks_to_do.push(task);
 
-    if (this.debug) {
-        console.log('gate task done');
-    }
+        ++ this._tasks;
+        if (this.debug) {
+            console.log('gate %s task starting: %s - status: %s', this.name, task, this._status_str());
+        }
+    },
 
-    this._check_status();
-}
+    task_done:function (task) {
+        -- this._tasks;
+        if (!task){
+            task = '(unknown)';
+        }
+        this._tasks_done.push(task);
 
-/**
- * returns a callback that, when called, acknowledges
- * that a task has been completed.
- * @param start_task
- */
-module.exports.prototype.task_done_callback = function (start_task) {
-    var my_gate = this;
-    return function () {
-        my_gate.task_done();
-    }
-    if (start_task) {
-        // acknowledge that a task has been begun.
-        this.task_start();
-    }
-}
+        if (this.debug) {
+            console.log('gate %s task done; %s - status: %s', this.name, task, this._status_str());
+        }
+        this._check_status();
+    },
 
-module.exports.prototype._check_status = function () {
-    var self = this;
+    _start: false,
+    _done: false,
 
-    if (this._start) {
-        if (this._tasks.length < 1) {
-            this._start = false;
-            if (this.debug) {
-                console.log(__filename + ':: _check_status: done with gate');
+    task_done_callback:function (start_task, on_done, task) {
+        var my_gate = this;
+        if (_.isString(start_task) && (!task)){
+            task == start_task;
+        }
+        return function () {
+            if (on_done){
+                on_done();
             }
-            this._callback(self);
+            my_gate.task_done( task);
+        }
+        if (start_task) {
+            // acknowledge that a task has been begun.
+            this.task_start(task);
+        }
+    },
+
+    _status_str: function(){
+        return util.format(': %s started: %s, done: %s, to do: (%s), done: (%s)',
+            this.name,
+            this._start ? 'true' : 'false',
+            this._done ? 'true' : 'false',
+            this._tasks_to_do.join(','), this._tasks_done.join(','));
+    },
+
+    _check_status:function () {
+        var self = this;
+
+        if (this.debug){
+            console.log( '_check_status: >>>> %s', this._status_str());
+        }
+
+        if (this._start) {
+
+            if (this._tasks < 1) {
+                if (this._done){
+                    if (this.multi){
+                        this._callback(self);
+                    } else {
+                        throw new Error('gate for ' + this._callback.toString() + ' attempting to finish twice. ' + this._status_str());
+                    }
+                } else {
+                    this._done = true;
+                    if (this.debug) {
+                        console.log('GATE %s:: _check_status:  !!!!! REACHED END !!!!!!', this.name);
+                    }
+                    this._callback();
+                }
+            } else {
+                if (this.debug) {
+                    console.log('GATE %s:: check status  task done; %s tasks left', this.name, this._tasks);
+                }
+            }
         } else {
             if (this.debug) {
-                console.log('task done; ', this._tasks.length, ' tasks left');
+                console.log('GATE %s:: check status, %s left: STILL NOT STARTED; ', this.name, this._tasks);
             }
         }
-    } else {
-        if (this.debug) {
-            console.log('task done; ', this._tasks.length, ' tasks left - STILL NOT STARTED');
-        }
     }
-}
+})
+

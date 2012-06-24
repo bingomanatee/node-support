@@ -33,9 +33,12 @@ MockModel.prototype = {
         callback(null, this.repo.slice(0));
     },
 
-    count:function (callback) {
-        //  console.log('counting records');
-        callback(null, this.repo.length);
+    count:function (filter, callback) {
+        if (!callback) {
+            filter = null;
+            callback = filter;
+        }
+        callback(null, filter ? _.filter(this.repo, filter).length : this.repo.length);
     },
 
     del:function (id, callback) {

@@ -1,10 +1,16 @@
-module.exports = function (resource_path) {
+module.exports = function (resource_path, open_head) {
     //  console.log('proper_path - pathing %s', resource_path);
-    if ((resource_path == '') || (resource_path == '/')){
+
+    if (resource_path == ''){
+        if (open_head){
+            return '';
+        } else {
+            return '/';
+        }
+    } else if (resource_path == '/'){
       //  console.log('root %s returning "/"', resource_path);
         return '/';
-    }
-    if (resource_path.substring(0, 1) != '/') { // insisting on first "/" being present
+    } else if ((!open_head) && (resource_path.substring(0, 1) != '/')) { // insisting on first "/" being present
         resource_path = '/' + resource_path;
     }
 

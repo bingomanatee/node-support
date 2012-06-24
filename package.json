@@ -1,8 +1,12 @@
 {
-  "author": "Dave Edelhart <dave@wonderlandlabs.com> (http://www.wonderlandlabs.com)",
+  "author": {
+    "name": "Dave Edelhart",
+    "email": "dave@wonderlandlabs.com",
+    "url": "http://www.wonderlandlabs.com"
+  },
   "name": "support",
   "description": "A toolkit for node.js",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "repository": {
     "type": "git",
     "url": "git://github.com/bingomanatee/node-support.git"
@@ -10,6 +14,17 @@
   "engines": {
     "node": "~0.6.14"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+      "underscore":">=1.2.3"},
+  "devDependencies": {},
+  "_id": "support@1.0.0",
+  "optionalDependencies": {},
+  "_engineSupported": true,
+  "_npmVersion": "1.1.16",
+  "_nodeVersion": "v0.6.15",
+  "_defaultsLoaded": true,
+  "dist": {
+    "shasum": "ae7d4fe920bc9dfaad102a8bfffcc031c8d897a4"
+  },
+  "_from": "support@>=1.0.0"
 }
