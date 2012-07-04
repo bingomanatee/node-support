@@ -61,6 +61,10 @@ function MongooseModel(model, config) {
     }
     this.model = model;
 
+    this.active = function(cb){
+        return this.model.active(cb);
+    }
+
 }
 
 MongooseModel.prototype = {

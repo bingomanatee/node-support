@@ -6,7 +6,7 @@
   },
   "name": "support",
   "description": "A toolkit for node.js",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "repository": {
     "type": "git",
     "url": "git://github.com/bingomanatee/node-support.git"
@@ -15,16 +15,21 @@
     "node": "~0.6.14"
   },
   "dependencies": {
-      "underscore":">=1.2.3"},
+    "underscore": ">=1.2.3"
+  },
   "devDependencies": {},
-  "_id": "support@1.0.0",
+  "_id": "support@1.0.4",
   "optionalDependencies": {},
   "_engineSupported": true,
-  "_npmVersion": "1.1.16",
-  "_nodeVersion": "v0.6.15",
+  "_npmVersion": "1.1.21",
+  "_nodeVersion": "v0.6.17",
   "_defaultsLoaded": true,
   "dist": {
-    "shasum": "ae7d4fe920bc9dfaad102a8bfffcc031c8d897a4"
+    "shasum": "1e786b4dd2d6876dab69b0be8d220c60fcd7c6a5"
   },
-  "_from": "support@>=1.0.0"
+  "_from": "support@1.0.4",
+  "_npmUser": {
+    "name": "bingomanatee",
+    "email": "dave@wonderlandlabs.com"
+  }
 }
