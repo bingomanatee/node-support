@@ -394,6 +394,6 @@ MongooseModel.prototype = {
 module.exports = {
     MongooseModel:MongooseModel,
     create:function (model, config, mongoose) {
-        return new MongooseModel(model, config);
+        return new MongooseModel(model, config, mongoose);
     }
 }
