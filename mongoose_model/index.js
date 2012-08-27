@@ -43,17 +43,17 @@ function MongooseModel(model, config) {
         }
 
         schema.statics.active = function (cb) {
-            var q = {'deleted':{'$ne':true}};
-            return cb ? this.find(q).run(cb) : this.find(q);
+            var q = {'$nor':[{deleted: true}]};
+            return cb ? this.find(q).exec(cb) : this.find(q);
         }
 
         schema.statics.active_count = function (cb) {
-            var q = {'deleted':{'$ne':true}};
+            var q = {'$nor':[{deleted: true}]};
             return cb ? this.find(q).count(cb) : this.find(q).count();
         }
 
         schema.statics.inactive = function (cb) {
-            return cb ? this.find('deleted', true).run(cb) : this.find('deleted', true)
+            return cb ? this.find('deleted', true).exec(cb) : this.find('deleted', true)
         }
 
         model = mongoose.model(this.name, schema);
@@ -61,7 +61,7 @@ function MongooseModel(model, config) {
     }
     this.model = model;
 
-    this.active = function(cb){
+    this.active = function (cb) {
         return this.model.active(cb);
     }
 
@@ -101,7 +101,7 @@ MongooseModel.prototype = {
             records.forEach(function (record) {
                 gate.task_start();
                 self.put(record, function (err, result) {
-                    if (result && !err){
+                    if (result && !err) {
                         results.push(result);
                     }
                     gate.task_done();
@@ -193,14 +193,18 @@ MongooseModel.prototype = {
 
     revise:function (data, callback) {
 
-        console.log(' =========== revise data: %s', util.inspect(data));
+        if (!data._id){
+            return callback(new Error('no _id in data'));
+        }
+
+        //console.log(' =========== revise data: %s', util.inspect(data));
         var self = this;
 
         this.get(data._id, function (err, record) {
 
             if (err) {
                 callback(err);
-            } else {
+            } else if (record) {
                 delete data._id;
 
                 var array_props = [];
@@ -223,7 +227,7 @@ MongooseModel.prototype = {
                         array_props.push({field:key, values:value});
                         has_array_props = true;
                     } else { // @TODO: what about objects?
-                        non_array_props.push({key:key, value:value})
+                        non_array_props[key] = value;
                         has_na_props = true;
                     }
                 });
@@ -233,7 +237,7 @@ MongooseModel.prototype = {
 
                 function _handle_array_props() {
                     var p = new Pipe(function () {
-                         //   console.log('getting record %s', record._id);
+                            //   console.log('getting record %s', record._id);
                             self.get(record._id, _callback);
                         },
                         function (key_value, record, act_done, pipe_done) {
@@ -245,15 +249,15 @@ MongooseModel.prototype = {
                             var values = key_value.values;
 
                             function _add_array_values() {
-                                console.log('adding array values for %s', field);
+                                //  console.log('adding array values for %s', field);
                                 record[field] = values;
                                 record.save(act_done)
                             }
 
-                        //    console.log('processing field %s: values %s', field, util.inspect(values));
+                            //    console.log('processing field %s: values %s', field, util.inspect(values));
 
                             if (record[field]) {
-                                console.log('removing old %s', field);
+                                //   console.log('removing old %s', field);
                                 if (_.isArray(record[field])) {
                                     while (record[field].length > 0) {
                                         console.log('removing first %s of %s', field, record[field].length);
@@ -262,7 +266,7 @@ MongooseModel.prototype = {
                                 } else {
                                     record[field] = [];
                                 }
-                          //      console.log('saving record %s', record._id);
+                                //      console.log('saving record %s', record._id);
                                 record.save(_add_array_values);
                             } else {
                                 _add_array_values();
@@ -282,6 +286,8 @@ MongooseModel.prototype = {
                 } else {
                     _callback();
                 }
+            } else {
+                callback(new Err('cannot find record ' + data._id));
             }
         })
 
@@ -300,20 +306,36 @@ MongooseModel.prototype = {
         }
         ;
         try {
-            this.model.find({}).sort('_id', 1).slice(skip, max).run(callback);
+            var all = this.model.find({}).sort('_id').slice(skip, max);
+            if (callback) {
+                all.exec(callback);
+            } else {
+                return all;
+            }
         } catch (err) {
             callback(err);
         }
     },
 
-    delete:function (id, callback) {
-        this.find(get, function (err, doc) {
-            if (doc) {
-                doc.remove(callback);
-            } else {
-                callback(new Error('Cannot find that document'));
-            }
-        })
+    delete:function (id, callback, soft) {
+        if (id) {
+
+            this.get(id, function (err, doc) {
+                if (doc) {
+                    if (soft) {
+                        doc.deleted = true;
+                        doc.save();
+                        callback(null, doc);
+                    } else {
+                        doc.remove(callback);
+                    }
+                } else {
+                    callback(new Error('Cannot find that document ' + id));
+                }
+            })
+        } else {
+            callback(new Error('no id passed to mm delete'));
+        }
     },
 
     find:function (crit, field, options, callback) {

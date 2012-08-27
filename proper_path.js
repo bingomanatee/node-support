@@ -1,5 +1,11 @@
+var _DEBUG = false;
 module.exports = function (resource_path, open_head) {
-    //  console.log('proper_path - pathing %s', resource_path);
+
+    if (typeof resource_path != 'string'){
+        throw new Error('proper_path:: bad path %s', util.inspect(resource_path));
+    }
+
+    if (_DEBUG) console.log('proper pathing %s', resource_path);
 
     if (resource_path == ''){
         if (open_head){
