@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var mongoose = require('mongoose');
 var util = require('util');
 var Gate = require('support/gate');
 var Pipe = require('support/pipe');
@@ -18,11 +17,18 @@ var Pipe = require('support/pipe');
  * That being said, the MongooseModel returns Mongoose Documents, not instances
  * of itself or any other custom record .. by default.
  *
+ * @VERY BIG USAGE NOTE!!!
+ *
+ * mongoose must be INJECTED into the mongoose model. This is because each mongoose
+ * has a potentially different default database, and I don't want to tie this model
+ * to a particular version of mongoose. That being said it is designed for at least
+ * mongoose v.3.x.
+ *
  * @param model
  * @param config
  */
 
-function MongooseModel(model, config) {
+function MongooseModel(model, config, mongoose) {
 
     if (config) {
         _.extend(this, config);
@@ -387,7 +393,7 @@ MongooseModel.prototype = {
 
 module.exports = {
     MongooseModel:MongooseModel,
-    create:function (model, config) {
+    create:function (model, config, mongoose) {
         return new MongooseModel(model, config);
     }
 }
