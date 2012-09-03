@@ -6,7 +6,7 @@
   },
   "name": "support",
   "description": "A toolkit for node.js",
-  "version": "1.0.8",
+  "version": "1.0.10",
   "repository": {
     "type": "git",
     "url": "git://github.com/bingomanatee/node-support.git"
@@ -18,7 +18,7 @@
     "underscore": ">=1.2.3"
   },
   "devDependencies": {},
-  "_id": "support@1.0.4",
+  "_id": "support@1.0.7",
   "optionalDependencies": {},
   "_engineSupported": true,
   "_npmVersion": "1.1.21",
@@ -27,9 +27,10 @@
   "dist": {
     "shasum": "1e786b4dd2d6876dab69b0be8d220c60fcd7c6a5"
   },
-  "_from": "support@1.0.4",
+  "_from": "support@1.0.7",
   "_npmUser": {
     "name": "bingomanatee",
     "email": "dave@wonderlandlabs.com"
-  }
+  },
+  "readme": "This is a set of utility functions for node.js; most of them are relatively\nself sufficient with the exception of mongoose-model which is a wrapper for mongoose. \n\n"
 }

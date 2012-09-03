@@ -6,6 +6,7 @@ module.exports = {
     gate: require('./gate'),
     Gate: require('./gate'),
     mongoose_model: require('./mongoose_model'),
+    nakamura_gate: require('./node_modules/gate'),
 
     proper_path: require('./proper_path'),
 
