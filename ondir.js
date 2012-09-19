@@ -15,7 +15,7 @@ var Gate = require('./gate');
  */
 module.exports = function(root_path, callback, if_file, if_dir, if_nopath) {
     root_path = root_path.replace(/\/$/, '');
-    if (!path.existsSync(root_path)) {
+    if (!fs.existsSync(root_path)) {
       //  console.log('no path ', root_path);
 
         if (if_nopath) {
