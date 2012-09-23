@@ -6,11 +6,7 @@
   },
   "name": "support",
   "description": "A toolkit for node.js",
-<<<<<<< HEAD
-  "version": "1.0.7",
-=======
   "version": "1.0.10",
->>>>>>> 2f0a512ddf54ffd08f44fca231acb218a9b8837c
   "repository": {
     "type": "git",
     "url": "git://github.com/bingomanatee/node-support.git"
