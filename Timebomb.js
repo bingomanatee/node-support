@@ -1,6 +1,4 @@
 var _ = require('underscore');
-var util = require('util');
-var fs = require('fs');
 
 function Timebomb(callback, delay, name) {
     this._callback = callback;
@@ -11,8 +9,12 @@ function Timebomb(callback, delay, name) {
 _.extend(Timebomb.prototype, {
     _timeout:false,
 
-    start:function () {
+    start:function (n) {
         this.stop();
+        
+        if(n){
+            this.delay = n;
+        }
 
         this._timeout = setTimeout(this._callback, this.delay);
     },
