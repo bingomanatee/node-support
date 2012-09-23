@@ -1,3 +1,0 @@
-This is a set of utility functions for node.js; most of them are relatively
-self sufficient with the exception of mongoose-model which is a wrapper for mongoose. 
-

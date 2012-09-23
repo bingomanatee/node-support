@@ -238,6 +238,7 @@ module.exports = {
                         if (doc) {
                             if (soft) {
                                 doc.deleted = true;
+
                                 doc.save(callback);
                             } else {
                                 doc.remove(callback);
