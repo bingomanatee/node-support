@@ -8,7 +8,7 @@ var con = 'mongodb://localhost/mongoose_model_tests_' + Math.floor(Math.random()
 console.log('creating %s', con);
 mongoose.connect(con);
 var tests_done = 0;
-var TEST_COUNT = 4;
+var TEST_COUNT = 5;
 
 function _try_drop() {
     if (++tests_done >= TEST_COUNT) {
@@ -19,6 +19,43 @@ function _try_drop() {
         });
     }
 }
+
+tap.test('archiving', function (t) {
+
+    var Back_Model = mongoose_model.create(
+        {
+            name:'string', tags:['string'], notes:'string', _archives: 'mixed'
+        },
+        {
+            name:'back'
+        }
+        , mongoose
+    )
+
+    Back_Model.add({name:'alpha', tags:['a', 'b'], notes:'n'},
+        function (err, alpha) {
+            t.equals(alpha.name, 'alpha', 'record created with record alpha');
+
+            var new_data = {foo: 'bar', tags: ['c', 'd'],  name: 'dontcopyme'};
+
+            Back_Model.archive(alpha, ['tags'], new_data, function(err, arch_alpha){
+                var j = arch_alpha.toJSON();
+                if (j._archives && j._archives[0]){
+
+                    t.ok(j._archives[0].__archived, 'has archive date');
+                    delete j._archives[0].__archived;
+                } else {
+                    t.fail('no archives');
+                }
+                delete j.__v;
+                delete(j._id);
+                t.deepEqual(j, {name: 'alpha', tags: ['c','d'],notes: 'n', _archives: [{tags: ['a', 'b']}]}, 'archived alpha');
+                _try_drop();
+                t.end();
+            })
+        }
+    )
+})
 
 tap.test('basic get put count', function (t) {
 
