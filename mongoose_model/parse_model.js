@@ -22,25 +22,31 @@ module.exports = function (model, mongoose, mongoose_model) {
             schema = new mongoose.Schema(model);
         }
 
-        schema.statics.active = function (callback) {
-            var q = {'$nor':[
-                {deleted:true}
-            ]};
-            return callback ? mongoose_model.find(q).exec(callback) : model.find(q);
-        }
+        try {
 
-        schema.statics.active_count = function (callback) {
-            var q = {'$nor':[
-                {deleted:true}
-            ]};
-            return callback ? mongoose_model.find(q).count(callback) : model.find(q).count();
-        }
+            schema.statics.active = function (callback) {
+                var q = {'$nor':[
+                    {deleted:true}
+                ]};
+                return callback ? mongoose_model.find(q).exec(callback) : mongoose_model.find(q);
+            }
 
-        schema.statics.inactive = function (callback) {
-            return callback ? mongoose_model.find('deleted', true).exec(callback) : mongoose_model.find('deleted', true)
-        }
+            schema.statics.active_count = function (callback) {
+                var q = {'$nor':[
+                    {deleted:true}
+                ]};
+                return callback ? mongoose_model.find(q).count(callback) : mongoose_model.find(q).count();
+            }
 
-        mongoose_model.model = mongoose.model(mongoose_model.name, schema);
+            schema.statics.inactive = function (callback) {
+                return callback ? mongoose_model.find('deleted', true).exec(callback) : mongoose_model.find('deleted', true)
+            }
+
+            mongoose_model.model = mongoose.model(mongoose_model.name, schema);
+        } catch (e) {
+            console.log('error in mongoose modelling: %s', e.getMessage());
+            throw e;
+        }
     }
 
 }

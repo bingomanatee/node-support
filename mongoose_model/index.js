@@ -62,8 +62,9 @@ function MongooseModel(model, config, mongoose) {
 
     // note: active is bound to the schema.statics inside _parse_model
 
+    var self = this;
     this.active = function (callback) {
-        return this.model.active(callback);
+        return self.model.active(callback);
     }
 
 }
