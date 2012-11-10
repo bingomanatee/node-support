@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var nakamura_gate = require('./../node_modules/gate');
+var nakamura_gate = require('gate');
 var _DEBUG = false;
 
 

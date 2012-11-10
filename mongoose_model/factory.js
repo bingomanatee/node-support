@@ -1,7 +1,7 @@
 var async = require('async');
 var util = require('util');
 var _ = require('underscore');
-var Gate = require('./../node_modules/gate');
+var Gate = require('gate');
 
 module.exports = function (model, generator, count, callback, dontreturn) {
     var aborted = false;
